@@ -11,7 +11,7 @@ function Projects({ match }) {
     <div className="p-4">
       <div className="container">
         <Switch>
-          <Route exact path={path} component={List} myProp={'this is a prop'} />
+          <Route exact path={path} component={List} />
           <Route path={`${path}/add`} component={AddEdit} />
           <Route path={`${path}/edit/:id`} component={AddEdit} />
           <Route path={`${path}/view/:id`} component={AddEdit} />

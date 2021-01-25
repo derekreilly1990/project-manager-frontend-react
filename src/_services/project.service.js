@@ -6,6 +6,7 @@ const baseUrl = `${config.apiUrl}/projects`;
 export const projectService = {
   getAll,
   getById,
+  getAllByManagerId,
   create,
   update,
   delete: _delete
@@ -13,6 +14,10 @@ export const projectService = {
 
 function getAll() {
   return fetchWrapper.get(baseUrl);
+}
+
+function getAllByManagerId(id) {
+  return fetchWrapper.get(`${baseUrl}/manager/${id}`);
 }
 
 function getById(id) {

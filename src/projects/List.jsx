@@ -1,26 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { makeStyles, useTheme } from '@material-ui/core/styles';
 import Card from '@material-ui/core/Card';
 import GridList from '@material-ui/core/GridList';
 import CardContent from '@material-ui/core/CardContent';
 import CardMedia from '@material-ui/core/CardMedia';
-import IconButton from '@material-ui/core/IconButton';
 import Typography from '@material-ui/core/Typography';
 import VisibilityIcon from '@material-ui/icons/Visibility';
+import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
 import { CircularProgressWithLabel } from '@/_components/CircularProgressWithLabel';
+import { Link } from 'react-router-dom';
+import { accountService, projectService } from '@/_services';
+import { Role } from '@/_helpers';
 
 const useStyles = makeStyles(theme => ({
   root: {
     display: 'flex',
-    flexDirection: 'column',
-    height: '100%'
+    flexDirection: 'column'
+    //height: '100%'
   },
   cardRoot: {
-    display: 'flex'
+    display: 'flex',
+    margin: theme.spacing(2)
   },
   gridList: {
     width: '100%',
-    height: 480
+    height: 'auto'
   },
   details: {
     flex: 1,
@@ -44,83 +48,103 @@ const useStyles = makeStyles(theme => ({
   playIcon: {
     height: 38,
     width: 38
+  },
+  empty: {
+    width: '100%',
+    height: '200px',
+    margin: 'auto'
   }
 }));
 
 function List(props) {
+  const { path } = props.match;
   const classes = useStyles();
-  const theme = useTheme();
-  console.log('props', props);
+  const user = accountService.userValue;
+  const [projects, setProjects] = useState([]);
 
-  const [projects, setProjects] = useState([
-    {
-      id: 'njcisavnjkvbasv',
-      title: 'example project 1',
-      description: 'this is a description of the project',
-      progress: 20,
-      startDate: '10012020',
-      expectedEndDate: '10122020',
-      actualEndDate: undefined,
-      manager: 'Made up company name',
-      mainImageUrl: 'https://via.placeholder.com/100x160'
-    },
-    {
-      id: 'gehbrwhttwvbasv',
-      title: 'example project 2',
-      description: 'this is a description of the project',
-      progress: 82,
-      startDate: '10012020',
-      expectedEndDate: '10122020',
-      actualEndDate: undefined,
-      manager: 'Made up company name 2',
-      mainImageUrl: 'https://via.placeholder.com/100x160'
-    },
-    {
-      id: 'njhjilgymjuyysv',
-      title: 'example project 3',
-      description: 'this is a description of the project',
-      progress: 43,
-      startDate: '10012020',
-      expectedEndDate: '10122020',
-      actualEndDate: 14122020,
-      manager: 'Made up company name',
-      mainImageUrl: 'https://via.placeholder.com/100x160'
+  function deleteProject(id) {
+    setProjects(
+      projects.map(x => {
+        if (x.id === id) {
+          x.isDeleting = true;
+        }
+        return x;
+      })
+    );
+    projectService.delete(id).then(() => {
+      setProjects(projects => projects.filter(x => x.id !== id));
+    });
+  }
+
+  useEffect(() => {
+    if (user.role === Role.Admin) {
+      projectService.getAll().then(x => setProjects(x));
+    } else if (user.role === Role.Manager) {
+      projectService.getAllByManagerId(user.id).then(x => setProjects(x));
     }
-  ]);
+  }, []);
 
-  return (
-    <div className={classes.root}>
-      <GridList className={classes.gridList} cols={1} cellHeight={'auto'}>
-        {projects.map(proj => {
-          return (
-            <Card className={classes.cardRoot} key={proj.id}>
-              <CardMedia className={classes.cover} image={proj.mainImageUrl} title={proj.title} />
-              <div className={classes.details}>
-                <CardContent className={classes.content}>
-                  <Typography component="h5" variant="h5">
-                    {proj.title}
-                  </Typography>
-                  <Typography variant="subtitle1" color="textSecondary">
-                    {proj.manager}
-                  </Typography>
-                  <Typography variant="body1">{proj.description}</Typography>
-                  <Typography variant="subtitle2">{proj.startDate + ' - ' + proj.expectedEndDate}</Typography>
-                </CardContent>
-                <div className={classes.controls}>
-                  <IconButton aria-label="show">
-                    <VisibilityIcon />
-                  </IconButton>
+  if (!projects || projects.length === 0)
+    return (
+      <div className={classes.empty}>
+        <div>No Projects to display</div>
+      </div>
+    );
+  else {
+    return (
+      <div className={classes.root}>
+        {user.role !== Role.User && (
+          <Link to={`${path}/add`} className="btn btn-sm btn-success mb-2">
+            Add Project
+          </Link>
+        )}
+        {user.role === Role.User && (
+          <Link to={`${path}/add`} className="btn btn-sm btn-success mb-2">
+            Add Project
+          </Link>
+        )}
+        <GridList className={classes.gridList} cols={1} cellHeight={'auto'}>
+          {projects.map(proj => {
+            return (
+              <Card className={classes.cardRoot} key={proj.id}>
+                <CardMedia className={classes.cover} image={proj.mainImageUrl} title={proj.title} />
+                <div className={classes.details}>
+                  <CardContent className={classes.content}>
+                    <Typography component="h5" variant="h5">
+                      {proj.title}
+                    </Typography>
+                    {proj.manager && (
+                      <Typography variant="subtitle1" color="textSecondary">
+                        Manager: {proj.manager.firstName + ' ' + proj.manager.lastName}
+                      </Typography>
+                    )}
+                    <Typography variant="body1">{proj.description}</Typography>
+                    <Typography variant="subtitle2">{'Start date :' + proj.startDate}</Typography>
+                    <Typography variant="subtitle2">{'Expected end date :' + proj.expectedEndDate}</Typography>
+                  </CardContent>
+                  <div className={classes.controls}>
+                    <Link to={`${path}/edit/${proj.id}`} className="btn btn-sm mr-1">
+                      <VisibilityIcon />
+                    </Link>
+                    <button onClick={() => deleteProject(proj.id)} className="btn btn-sm " disabled={user.isDeleting}>
+                      {user.isDeleting ? (
+                        <span className="spinner-border spinner-border-sm"></span>
+                      ) : (
+                        <DeleteForeverIcon />
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className={classes.cover}>
-                <CircularProgressWithLabel value={proj.progress} size={120} />
-              </div>
-            </Card>
-          );
-        })}
-      </GridList>
-    </div>
-  );
+                <div className={classes.cover}>
+                  <CircularProgressWithLabel value={proj.progress} size={120} />
+                </div>
+              </Card>
+            );
+          })}
+        </GridList>
+      </div>
+    );
+  }
 }
 
 export { List };
