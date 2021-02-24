@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Formik, Field, Form, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import TextField from '@material-ui/core/TextField';
 import { projectService, alertService, accountService } from '@/_services';
 import { Role } from '@/_helpers';
+import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
+import AddCircleIcon from '@material-ui/icons/AddCircle';
+import { Checkbox, FormControlLabel } from '@material-ui/core';
 
 function AddEdit({ history, match }) {
   const { id } = match.params;
@@ -19,6 +22,7 @@ function AddEdit({ history, match }) {
     progress: 0,
     startDate: '',
     expectedEndDate: '',
+    isSubscribed: false,
     manager: ''
     // actualEndDate: ''
   };
@@ -34,6 +38,11 @@ function AddEdit({ history, match }) {
     //actualEndDate: Yup.string()
   });
 
+  const isSubscribed = (subscribers, userId) => {
+    return subscribers.find(subscriber => {
+      return subscriber === userId;
+    });
+  };
   function onSubmit(fields, { setStatus, setSubmitting }) {
     setStatus();
     if (isAddMode) {
@@ -94,6 +103,7 @@ function AddEdit({ history, match }) {
                 //'actualEndDate'
               ];
               fields.forEach(field => setFieldValue(field, project[field], false));
+              setFieldValue('isSubscribed', isSubscribed(project.subscribers, user.id), false);
             });
           }
         }, []);
@@ -101,6 +111,14 @@ function AddEdit({ history, match }) {
         return (
           <Form>
             <h1>{isAddMode ? 'Add Project' : 'Edit Project'}</h1>
+
+            <button onClick={() => subscribe(proj.id)} className="btn btn-sm ">
+              <AddCircleIcon />
+              Subscribe
+            </button>
+            <div className="form-row">
+              <FormControlLabel control={<Checkbox name="isSubscribed" />} label="Subscribed" />
+            </div>
             <div className="form-row">
               <div className="form-group col">
                 <label>Title</label>
